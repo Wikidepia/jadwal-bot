@@ -106,32 +106,32 @@ int main()
         char buf[2048];
         if (body && strlen(body) > 0)
         {
-            printf("Extracted body:\n%s\n", body);
-            json_t const *parent = json_create(body, g_pool, MAX_FIELDS);
-            if (parent == NULL)
+            json_t *parent = json_create(body, g_pool, MAX_FIELDS);
+            if (parent == NULL) {
                 close(new_socket);
                 continue;
+            }
 
-            json_t const *inline_query = json_getProperty(parent, "inline_query");
+            json_t *inline_query = json_getProperty(parent, "inline_query");
             if (!inline_query)
             {
-                puts("Error, the last name property is not found.");
+                puts("no inline_query found.");
                 close(new_socket);
                 continue;
             }
 
-            const char *query = json_getPropertyValue(inline_query, "query");
+            char *query = json_getPropertyValue(inline_query, "query");
             if (!query)
             {
-                puts("Error, the last name property is not found.");
+                puts("no query found.");
                 close(new_socket);
                 continue;
             }
 
-            const char *inline_query_id = json_getPropertyValue(inline_query, "id");
+            char *inline_query_id = json_getPropertyValue(inline_query, "id");
             if (!inline_query_id)
             {
-                puts("Error, the last name property is not found.");
+                puts("no query_id found.");
                 close(new_socket);
                 continue;
             }
@@ -184,73 +184,82 @@ int main()
                             big_index[2] = i;
                         }
                     }
-                    int cc;
-                    for (cc = 0; cc < 3; cc++)
+
+                    int k;
+                    for (k = 0; k < 3; k++)
                     {
-                        if (big_score[cc] == 0)
+                        if (big_score[k] == 0)
                             continue;
-                        char text[10240];
-                        int old_length = 0;
+                        char text[1024];
+                        int text_length = 0;
+                        int cur_idx = big_index[k];
 
+                        int hidx;
                         char *header = "*Jadwal Sholat Untuk Wilayah ";
-                        int bc;
-                        for (bc = 0; bc < strlen(header); bc++)
+                        for (hidx = 0; hidx < strlen(header); hidx++)
                         {
-                            text[old_length] = header[bc];
-                            old_length += 1;
+                            text[text_length] = header[hidx];
+                            text_length += 1;
                         }
-                        for (bc = 0; bc < strlen(g_kota[big_index[cc]]); bc++)
+                        for (hidx = 0; hidx < strlen(g_kota[cur_idx]); hidx++)
                         {
-                            text[old_length] = g_kota[big_index[cc]][bc];
-                            old_length += 1;
+                            text[text_length] = g_kota[cur_idx][hidx];
+                            text_length += 1;
                         }
-                        text[old_length] = '*';
-                        old_length += 1;
-                        text[old_length] = '\n';
-                        old_length += 1;
-                        text[old_length] = '\n';
-                        old_length += 1;
 
-                        text[old_length] = '`';
-                        old_length += 1;
-                        text[old_length] = '`';
-                        old_length += 1;
-                        text[old_length] = '`';
-                        old_length += 1;
-                        text[old_length] = '\n';
-                        old_length += 1;
-                        for (int xb = 0; xb < 9; xb++)
+                        text[text_length] = '*';
+                        text_length += 1;
+                        text[text_length] = '\n';
+                        text_length += 1;
+                        text[text_length] = '\n';
+                        text_length += 1;
+
+                        text[text_length] = '`';
+                        text_length += 1;
+                        text[text_length] = '`';
+                        text_length += 1;
+                        text[text_length] = '`';
+                        text_length += 1;
+                        text[text_length] = '\n';
+                        text_length += 1;
+
+                        int col_idx;
+                        for (col_idx = 0; col_idx < 9; col_idx++)
                         {
-                            int bb;
-                            for (bb = 0; bb < strlen(g_colname[xb]); bb++)
+                            // Write column name
+                            int tidx;
+                            for (tidx = 0; tidx < strlen(g_colname[col_idx]); tidx++)
                             {
-                                text[old_length] = g_colname[xb][bb];
-                                old_length += 1;
+                                text[text_length] = g_colname[col_idx][tidx];
+                                text_length += 1;
                             }
-                            for (bb = 0; bb < strlen(g_jadwal[big_index[cc]][day_idx][xb]); bb++)
+
+                            // Write data
+                            for (tidx = 0; tidx < strlen(g_jadwal[cur_idx][day_idx][col_idx]); tidx++)
                             {
-                                text[old_length] = g_jadwal[big_index[cc]][day_idx][xb][bb];
-                                old_length += 1;
+                                text[text_length] = g_jadwal[cur_idx][day_idx][col_idx][tidx];
+                                text_length += 1;
                             }
-                            text[old_length] = '\n';
-                            old_length += 1;
+                            text[text_length] = '\n';
+                            text_length += 1;
                         }
-                        text[old_length] = '`';
-                        old_length += 1;
-                        text[old_length] = '`';
-                        old_length += 1;
-                        text[old_length] = '`';
-                        old_length += 1;
-                        text[old_length] = '\0';
+
+                        text[text_length] = '`';
+                        text_length += 1;
+                        text[text_length] = '`';
+                        text_length += 1;
+                        text[text_length] = '`';
+                        text_length += 1;
+                        text[text_length] = '\0';
 
                         jsonb_object(&b, buf, sizeof(buf));
                         {
                             jsonb_key(&b, buf, sizeof(buf), "type", strlen("type"));
                             jsonb_string(&b, buf, sizeof(buf), "article", strlen("article"));
                             jsonb_key(&b, buf, sizeof(buf), "id", strlen("id"));
-                            jsonb_number(&b, buf, sizeof(buf), big_index[cc]);
+                            jsonb_number(&b, buf, sizeof(buf), cur_idx);
                             jsonb_key(&b, buf, sizeof(buf), "title", strlen("title"));
-                            jsonb_string(&b, buf, sizeof(buf), g_kota[big_index[cc]], strlen(g_kota[big_index[cc]]));
+                            jsonb_string(&b, buf, sizeof(buf), g_kota[cur_idx], strlen(g_kota[cur_idx]));
                             jsonb_key(&b, buf, sizeof(buf), "input_message_content", strlen("input_message_content"));
                             jsonb_object(&b, buf, sizeof(buf));
                             {
