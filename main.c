@@ -103,11 +103,12 @@ int main()
         // Read client request
         read(new_socket, buffer, BUFFER_SIZE);
         char *body = extract_body(buffer);
-        char buf[2048];
+        char buf[2048] = {0};
         if (body && strlen(body) > 0)
         {
             json_t *parent = json_create(body, g_pool, MAX_FIELDS);
-            if (parent == NULL) {
+            if (parent == NULL)
+            {
                 close(new_socket);
                 continue;
             }
@@ -278,11 +279,8 @@ int main()
             }
 
             printf("JSON: %s\n", buf);
-        } // End of body check
-
-        // Send HTTP response
-        send_response(new_socket, "application/json", buf);
-        printf("Response sent.\n");
+            send_response(new_socket, "application/json", buf);
+        }
 
         // Close the connection
         close(new_socket);
