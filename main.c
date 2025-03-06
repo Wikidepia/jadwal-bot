@@ -195,63 +195,18 @@ int main()
                         int text_length = 0;
                         int cur_idx = big_index[k];
 
-                        int hidx;
                         char *header = "*Jadwal Sholat Untuk Wilayah ";
-                        for (hidx = 0; hidx < strlen(header); hidx++)
-                        {
-                            text[text_length] = header[hidx];
-                            text_length += 1;
-                        }
-                        for (hidx = 0; hidx < strlen(g_kota[cur_idx]); hidx++)
-                        {
-                            text[text_length] = g_kota[cur_idx][hidx];
-                            text_length += 1;
-                        }
-
-                        text[text_length] = '*';
-                        text_length += 1;
-                        text[text_length] = '\n';
-                        text_length += 1;
-                        text[text_length] = '\n';
-                        text_length += 1;
-
-                        text[text_length] = '`';
-                        text_length += 1;
-                        text[text_length] = '`';
-                        text_length += 1;
-                        text[text_length] = '`';
-                        text_length += 1;
-                        text[text_length] = '\n';
-                        text_length += 1;
+                        text_length += snprintf(text + text_length, sizeof(text) - text_length, "%s", header);
+                        text_length += snprintf(text + text_length, sizeof(text) - text_length, "%s\n", g_kota[cur_idx]);
+                        text_length += snprintf(text + text_length, sizeof(text) - text_length, "*\n\n```\n");
 
                         int col_idx;
                         for (col_idx = 0; col_idx < 9; col_idx++)
                         {
-                            // Write column name
-                            int tidx;
-                            for (tidx = 0; tidx < strlen(g_colname[col_idx]); tidx++)
-                            {
-                                text[text_length] = g_colname[col_idx][tidx];
-                                text_length += 1;
-                            }
-
-                            // Write data
-                            for (tidx = 0; tidx < strlen(g_jadwal[cur_idx][day_idx][col_idx]); tidx++)
-                            {
-                                text[text_length] = g_jadwal[cur_idx][day_idx][col_idx][tidx];
-                                text_length += 1;
-                            }
-                            text[text_length] = '\n';
-                            text_length += 1;
+                            text_length += snprintf(text + text_length, sizeof(text) - text_length, "%s%s\n", g_colname[col_idx], g_jadwal[cur_idx][day_idx][col_idx]);
                         }
 
-                        text[text_length] = '`';
-                        text_length += 1;
-                        text[text_length] = '`';
-                        text_length += 1;
-                        text[text_length] = '`';
-                        text_length += 1;
-                        text[text_length] = '\0';
+                        text_length += snprintf(text + text_length, sizeof(text) - text_length, "```\n");
 
                         jsonb_object(&b, buf, sizeof(buf));
                         {
