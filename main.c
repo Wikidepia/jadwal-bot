@@ -40,6 +40,27 @@ void send_response(int socket, const char *content_type, const char *body) {
   write(socket, response, strlen(response));
 }
 
+void minutesToHHMM(int minutes, char *timeStr) {
+  // Calculate hours and remaining minutes
+  int hours = minutes / 60;
+  int mins = minutes % 60;
+
+  // Format the time as hh:mm
+  sprintf(timeStr, "%02d:%02d", hours, mins);
+}
+
+const char *get_weekday(int year, int month, int day) {
+  /* using C99 compound literals in a single line: notice the splicing */
+  return ((const char *[]){
+      "Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu",
+      "Ahad"})[(day + ((153 * (month + 12 * ((14 - month) / 12) - 3) + 2) / 5) +
+                (365 * (year + 4800 - ((14 - month) / 12))) +
+                ((year + 4800 - ((14 - month) / 12)) / 4) -
+                ((year + 4800 - ((14 - month) / 12)) / 100) +
+                ((year + 4800 - ((14 - month) / 12)) / 400) - 32045) %
+               7];
+}
+
 int main() {
   int server_fd, new_socket;
   struct sockaddr_in address;
@@ -93,27 +114,27 @@ int main() {
     char *body = extract_body(buffer);
     char buf[2048] = {0};
     if (body && strlen(body) > 0) {
-      json_t *parent = json_create(body, g_pool, MAX_FIELDS);
+      const json_t *parent = json_create(body, g_pool, MAX_FIELDS);
       if (parent == NULL) {
         close(new_socket);
         continue;
       }
 
-      json_t *inline_query = json_getProperty(parent, "inline_query");
+      const json_t *inline_query = json_getProperty(parent, "inline_query");
       if (!inline_query) {
         puts("no inline_query found.");
         close(new_socket);
         continue;
       }
 
-      char *query = json_getPropertyValue(inline_query, "query");
+      const char *query = json_getPropertyValue(inline_query, "query");
       if (!query) {
         puts("no query found.");
         close(new_socket);
         continue;
       }
 
-      char *inline_query_id = json_getPropertyValue(inline_query, "id");
+      const char *inline_query_id = json_getPropertyValue(inline_query, "id");
       if (!inline_query_id) {
         puts("no query_id found.");
         close(new_socket);
@@ -144,7 +165,7 @@ int main() {
           int big_score[3] = {0};
           int big_index[3] = {0};
           for (int i = 0; i < sizeof(g_kota) / sizeof(char *); i++) {
-            char *entry = g_kota[i];
+            const char *entry = g_kota[i];
             int32_t score = fuzzy_match(query, entry);
             if (score < 0)
               continue;
@@ -184,10 +205,26 @@ int main() {
                                     sizeof(text) - text_length, "*\n\n```\n");
 
             int col_idx;
+            const int baseMinutes[] = {0,   240, 300,  360, 420,
+                                       720, 900, 1080, 1140};
+            // Indices:       0, 1,   2,   3,   4,   5,   6,   7,    8
+            // Prayer Names:  --, Imsak, Subuh, Terbit, Dhuha, Dzuhur, Ashar,
+            // Maghrib, Isya
+
             for (col_idx = 0; col_idx < 9; col_idx++) {
-              text_length += snprintf(
-                  text + text_length, sizeof(text) - text_length, "%s%s\n",
-                  g_colname[col_idx], g_jadwal[cur_idx][day_idx][col_idx]);
+              char valueStr[32];
+              if (col_idx == 0) {
+                snprintf(valueStr, sizeof(valueStr), "%s, %02d/%02d/%d",
+                         get_weekday(2025, 1, day_idx + 1), day_idx + 1, 3,
+                         2025);
+              } else {
+                minutesToHHMM(baseMinutes[col_idx] -
+                                  (int)g_jadwal[cur_idx][day_idx][col_idx],
+                              valueStr);
+              }
+              text_length +=
+                  snprintf(text + text_length, sizeof(text) - text_length,
+                           "%s%s\n", g_colname[col_idx], valueStr);
             }
 
             text_length += snprintf(text + text_length,
