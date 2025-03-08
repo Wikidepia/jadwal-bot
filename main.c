@@ -215,10 +215,10 @@ int main() {
               char valueStr[32];
               if (col_idx == 0) {
                 snprintf(valueStr, sizeof(valueStr), "%s, %02d/%02d/%d",
-                         get_weekday(2025, 1, day_idx + 1), day_idx + 1, 3,
+                         get_weekday(2025, 3, day_idx + 1), day_idx + 1, 3,
                          2025);
               } else {
-                minutesToHHMM(baseMinutes[col_idx] -
+                minutesToHHMM(baseMinutes[col_idx] +
                                   (int)g_jadwal[cur_idx][day_idx][col_idx],
                               valueStr);
               }
